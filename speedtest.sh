@@ -1,6 +1,6 @@
 #!/bin/bash
 
-INFLUXDB_HOST="192.168.1.28"
+INFLUXDB_HOST="influx.example.com"
 INFLUXDB_PORT="8086"
 DATABASE="speedtest"
 
