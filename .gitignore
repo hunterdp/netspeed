@@ -1,0 +1,15 @@
+*.log
+*.out
+*.aux
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+*.csv
+./.vscode/*
+./.vscode/.*
+./.vscode/*.*
+*.code-workspace
+.netspeed-env
+.netspeed-env/*
+.netspeed-env/*.*
+
