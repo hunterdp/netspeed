@@ -1,11 +1,5 @@
 #!/bin/bash
 
-INFLUXDB_HOST="influx.example.com"
-INFLUXDB_PORT="8086"
-DATABASE="speedtest"
-
-[ -f /etc/default/speedtest_tester ] && . /etc/default/speedtest_tester
-
 while [[ $# > 0 ]]; do
  key="$1"
 
