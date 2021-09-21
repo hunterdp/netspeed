@@ -22,6 +22,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+# TODO(DPH) Add conf_validation() rotuine
+
 import sys
 import speedtest
 import influxdb
@@ -141,50 +143,6 @@ def get_command_options(parser):
     return (options)
 
 
-def create_data_points(data, json_data):
-    json_data = [
-        {
-            "measurement": "speedtest",
-            "tags": {
-                "client_ip": data['client']['ip'],
-                "client_isp": data['client']['isp']
-            },
-
-            "time": data['timestamp'],
-
-            "fields": {
-                "download": data["download"],
-                "upload": data["upload"],
-                "ping": data["ping"],
-                "url_host": data["server"]["host"],
-                "server_lat": data["server"]["lat"],
-                "server_lon": data["server"]["lon"],
-                "name": data["server"]["name"],
-                "server_country": data["server"]["country"],
-                "server_cc": data["server"]["cc"],
-                "id": data["server"]["id"],
-                "server_d": data["server"]["d"],
-                "server_latency": data["server"]["latency"],
-                "client_ip": data['client']['ip'],
-                "client_lat": data['client']['lat'],
-                "client_lon": data['client']['lon'],
-                "client_isp": data['client']['isp'],
-                "client_isprating": data['client']['isprating'],
-                "client_rating": data['client']['rating'],
-                "client_ispdlavg": data['client']['ispdlavg'],
-                "client_ispulavg": data['client']['ispulavg'],
-                "client_loggedin": data['client']['loggedin'],
-                "client_country": data['client']['country'],
-                "timestamp": data['timestamp'],
-                "bytes_sent": data['bytes_sent'],
-                "bytes_received": data['bytes_received'],
-                "share": data['share']
-            }
-        }
-    ]
-    return(SUCCESS)
-
-
 def get_config(conf_file):
     if os.path.exists(conf_file):
         with open(conf_file) as json_config_file:
@@ -200,6 +158,27 @@ def get_config(conf_file):
         logging.error(conf_file + ' does not exist')
         return(FAILED)
     return(data)
+
+
+def get_wait_time(t):
+    period = t[-1]
+    s_duration = int(t[:-1])
+
+    if period == 's':
+        logging.info('Wait time is %d seconds.', (s_duration))
+        return(s_duration)
+    elif period == 'm':
+        logging.info('Wait time %d minutes.', (s_duration))
+        return(s_duration*60)
+    elif period == 'h':
+        logging.info('Wait time %d hours.', (s_duration))
+        return(s_duration*360)
+    elif period == 'd':
+        logging.info('Wait time %d days.', (s_duration))
+        return((s_duration*360)*24)
+    else:
+        logging.error('Invalid waiting period.  Value read was %s', (t))
+        return(FAILED)
 
 
 def get_servers(s, pref_servers, any_server):
@@ -245,11 +224,54 @@ def conn_speedtest():
     try:
         s = speedtest.Speedtest()
     except Exception as err:
-        msg = __TITLE__ + ' ' + __VERSION__ + ' failed at ' + str(timestamp)
         logging.error('speedtest failure')
-        logging.exception('Exception caught')
+        logging.exception(err)
         return(FAILED)
     return(s)
+
+
+def create_data_points(data, json_data):
+    json_data = [
+        {
+            "measurement": "speedtest",
+            "tags": {
+                "client_ip": data['client']['ip'],
+                "client_isp": data['client']['isp']
+            },
+
+            "time": data['timestamp'],
+
+            "fields": {
+                "download": data["download"],
+                "upload": data["upload"],
+                "ping": data["ping"],
+                "url_host": data["server"]["host"],
+                "server_lat": data["server"]["lat"],
+                "server_lon": data["server"]["lon"],
+                "name": data["server"]["name"],
+                "server_country": data["server"]["country"],
+                "server_cc": data["server"]["cc"],
+                "id": data["server"]["id"],
+                "server_d": data["server"]["d"],
+                "server_latency": data["server"]["latency"],
+                "client_ip": data['client']['ip'],
+                "client_lat": data['client']['lat'],
+                "client_lon": data['client']['lon'],
+                "client_isp": data['client']['isp'],
+                "client_isprating": data['client']['isprating'],
+                "client_rating": data['client']['rating'],
+                "client_ispdlavg": data['client']['ispdlavg'],
+                "client_ispulavg": data['client']['ispulavg'],
+                "client_loggedin": data['client']['loggedin'],
+                "client_country": data['client']['country'],
+                "timestamp": data['timestamp'],
+                "bytes_sent": data['bytes_sent'],
+                "bytes_received": data['bytes_received'],
+                "share": data['share']
+            }
+        }
+    ]
+    return(SUCCESS)
 
 
 def write_to_db(server, port, user, password, dbname, data):
@@ -265,27 +287,6 @@ def write_to_db(server, port, user, password, dbname, data):
         logging.info('Data written to database %s', (dbname))
         db.close()
         return(SUCCESS)
-
-
-def get_wait_time(t):
-    period = t[-1]
-    s_duration = int(t[:-1])
-
-    if period == 's':
-        logging.info('Wait time is %d seconds.', (s_duration))
-        return(s_duration)
-    elif period == 'm':
-        logging.info('Wait time %d minutes.', (s_duration))
-        return(s_duration*60)
-    elif period == 'h':
-        logging.info('Wait time %d hours.', (s_duration))
-        return(s_duration*360)
-    elif period == 'd':
-        logging.info('Wait time %d days.', (s_duration))
-        return((s_duration*360)*24)
-    else:
-        logging.error('Invalid waiting period.  Value read was %s', (t))
-        return(FAILED)
 
 
 def main():
@@ -321,13 +322,15 @@ def main():
         else:
             data_points = []
             try:
-                logging.info('Starting download test with %s threads.',(conf['speedtest']['down_threads']))
+                logging.info('Starting download test with %s threads.',
+                             (conf['speedtest']['down_threads']))
                 s.download(threads=int(conf['speedtest']['down_threads']))
             except Exception as err:
                 logging.exception(err)
 
             try:
-                logging.info('Starting upload test with %s threads.',(conf['speedtest']['up_threads']))
+                logging.info('Starting upload test with %s threads.',
+                             (conf['speedtest']['up_threads']))
                 s.upload(threads=int(conf['speedtest']['up_threads']))
             except Exception as err:
                 logging.exception(err)
