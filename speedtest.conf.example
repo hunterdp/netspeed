@@ -1,0 +1,16 @@
+# Example configuration for speedtest_metrics.sh
+# Copy this file to /etc/speedtest.conf or specify a path with the -c flag.
+
+# InfluxDB connection details
+INFLUXDB_HOST="localhost"
+INFLUXDB_PORT="8086"
+INFLUXDB_DATABASE="speedtest"
+
+# Optional: InfluxDB credentials. Leave blank if not needed.
+# For security, it is recommended to use an InfluxDB token in the password field
+# with a user that has read/write access only to the target database.
+INFLUXDB_USER="your-username"
+INFLUXDB_PASS="your-password-or-token"
+
+# Path for the log file
+LOG_FILE="/var/log/speedtest.log"
