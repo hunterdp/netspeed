@@ -1,26 +1,49 @@
 # netspeed
-Three utilities for measuring the network upload and download speed.  The package *speedtest-cli* needs to be installed. 
+Utilities for measuring network upload and download speed and storing the results in InfluxDB.
 
 ## Files
 
-### `speedtest.sh`
-A script that help keep track of network speed. Used for testing the upload and download speeds of your connection.
-It stores the data into an InfluxDB for further processing.  The script can be used as a cron job.
+### `speedtest_metrics.sh` (Recommended)
+A robust shell script that measures network speed and sends the data to an InfluxDB instance. This script is designed to be secure, configurable, and easy to use, making it ideal for running as a cron job. It replaces the older `speedtest.sh` and `run_speedtest.sh` scripts.
+
+**Features:**
+*   Securely loads credentials from a configuration file.
+*   Parses `speedtest-cli`'s JSON output for reliable results.
+*   Checks for dependencies (`speedtest-cli`, `jq`, `curl`).
+*   Provides clear logging to a configurable log file.
+*   Supports command-line arguments to override configuration.
+
+**Dependencies:**
+*   `speedtest-cli`: The command-line interface for testing internet bandwidth.
+*   `jq`: A lightweight and flexible command-line JSON processor.
+*   `curl`: A tool for transferring data with URLs.
+
+**Configuration:**
+Create a configuration file to store your InfluxDB connection details. You can copy the provided example file:
+```bash
+cp speedtest.conf.example /etc/speedtest.conf
+```
+Then, edit `/etc/speedtest.conf` with your database details. The script will automatically load this file. Alternatively, you can place the config file elsewhere and specify its path with the `-c` flag.
 
 **Usage:**
 ```bash
-./speedtest.sh -p <influxdb host port> -h <influxdb host> --database <database name>
+# Basic usage (loads config from /etc/speedtest.conf)
+./speedtest_metrics.sh
+
+# Override config with command-line flags
+./speedtest_metrics.sh -h my-influx-host.local -d my-database -u user -P pass
+
+# Use a custom config file
+./speedtest_metrics.sh -c /path/to/my/speedtest.conf
 ```
 
-**Arguments:**
-* `-p`, `--port`: The port number of the InfluxDB host.
-* `-h`, `--host`: The hostname or IP address of the InfluxDB host.
-* `--database`: The name of the InfluxDB database.
+**Command-line Options:**
+Run `./speedtest_metrics.sh --help` to see all available options.
+
+---
 
 ### `speedtest_influx.py`
-This is a more in-depth usage of the speedtest-cli package.  It stores a larger variety of information
-in the Influx database.  It can be run interactively or as a crontab job or as a container job.  The 
-configuration information is stored in the `config.json` file.
+This is a more in-depth Python utility that uses the `speedtest-cli` package. It stores a larger variety of information in the InfluxDB database. The configuration information is stored in the `config.json` file.
 
 **Usage:**
 ```bash
@@ -28,69 +51,24 @@ python3 speedtest_influx.py [options] <configfile>
 ```
 
 **Arguments:**
-* `configfile`: Name of the configuration file (default: `config.json`).
-* `--log`, `--log_level`: Set the logging level [debug info warning error] (default: `info`).
-* `-l`, `--log_file`: Set the logfile name (default: `speedtest_influx.log`).
-* `-o`, `--output`: Output directory to store results files (default: `./`).
-* `-v`, `--version`: Prints the version.
-* `-i`, `--interactive`: Run program once.
-* `-j`, `--json`: Save original JSON data files.
+*   `configfile`: Name of the configuration file (default: `config.json`).
+*   `--log`, `--log_level`: Set the logging level [debug info warning error] (default: `info`).
+*   `-l`, `--log_file`: Set the logfile name (default: `speedtest_influx.log`).
+*   `-o`, `--output`: Output directory to store results files (default: `./`).
+*   `-v`, `--version`: Prints the version.
+*   `-i`, `--interactive`: Run program once.
+*   `-j`, `--json`: Save original JSON data files.
 
-### `run_speedtest.sh`
-Another simple shell script that uses the speedtest-cli package. To use, add your specific influx server and 
-other configuration information at the top of the script.
+---
 
-**Note:** This script has no error checking and will store the username and password in the logfile.  Use at your own risk.
+### Configuration Files
 
-**Configuration:**
-The following variables must be set at the top of the script:
-* `INFLUXDB_HOST`: The hostname or IP address of your InfluxDB server.
-* `INFLUXDB_PORT`: The port of your InfluxDB server (default: `8086`).
-* `DATABASE`: The name of the InfluxDB database.
-* `USER`: The username for InfluxDB authentication.
-* `PASS`: The password for InfluxDB authentication.
+*   **`speedtest.conf.example`**: An example configuration file for `speedtest_metrics.sh`.
+*   **`config.json`**: The configuration file for `speedtest_influx.py`.
 
-### `config.json`
-This file contains the configuration for `speedtest_influx.py`.
+---
 
-**Structure:**
-```json
-{
-   "database":{
-      "server":"example.yourdomain.com",
-      "port":"8086",
-      "user":"username",
-      "pwd":"strongpassword",
-      "name":"speedtest"
-   },
-   "speedtest":{
-      "pref_servers": "12345",
-      "any_server": "True",
-      "language": "en",
-      "up_threads": "2",
-      "down_threads": "8",
-      "keep_json": "False"
-   },
-   "config": {
-      "wait_time": "12h"
-   }
-}
-```
-
-**`database` section:**
-* `server`: The hostname or IP address of your InfluxDB server.
-* `port`: The port of your InfluxDB server.
-* `user`: The username for InfluxDB authentication.
-* `pwd`: The password for InfluxDB authentication.
-* `name`: The name of the InfluxDB database.
-
-**`speedtest` section:**
-* `pref_servers`: A space-separated list of preferred speedtest server IDs.
-* `any_server`: If `True`, a random server will be chosen if the preferred servers are not available.
-* `language`: The language for the speedtest results.
-* `up_threads`: The number of threads to use for the upload test.
-* `down_threads`: The number of threads to use for the download test.
-* `keep_json`: If `True`, the raw JSON output from speedtest-cli will be saved.
-
-**`config` section:**
-* `wait_time`: The time to wait between tests (e.g., `12h`, `30m`, `60s`).
+### Deprecated Scripts
+The following scripts have been replaced by `speedtest_metrics.sh` and will be removed in a future version:
+*   `speedtest.sh`
+*   `run_speedtest.sh`
